@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tarik Tambang Live</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+    body {
+      background: radial-gradient(circle at top, #1e293b, #0f172a);
+      color: #f8fafc;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 14px;
+      overflow: hidden;
+      user-select: none;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .badge-red { background: #ef4444; padding: 4px 10px; border-radius: 99px; }
+    .badge-blue { background: #3b82f6; padding: 4px 10px; border-radius: 99px; }
+    .arena {
+      position: relative;
+      height: 110px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+    }
+    .half-red { width: 50%; height: 100%; background: rgba(239, 68, 68, 0.18); }
+    .half-blue { width: 50%; height: 100%; background: rgba(59, 130, 246, 0.18); }
+    .center-line {
+      position: absolute; left: 50%; top: 0; bottom: 0;
+      width: 3px; background: #facc15; transform: translateX(-50%);
+    }
+    .rope {
+      position: absolute;
+      width: 140%;
+      left: -20%;
+      height: 10px;
+      background: repeating-linear-gradient(45deg, #d97706, #d97706 10px, #92400e 10px, #92400e 20px);
+      transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .knot {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 34px;
+      height: 34px;
+      background: #facc15;
+      color: #0f172a;
+      border-radius: 50%;
+      font-weight: 900;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 18px rgba(250, 204, 21, 0.8);
+    }
+    .feed {
+      text-align: center;
+      font-size: 13px;
+      color: #cbd5e1;
+      min-height: 20px;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    button {
+      border: none;
+      padding: 10px;
+      border-radius: 10px;
+      font-weight: 700;
+      color: white;
+      cursor: pointer;
+    }
+    .btn-red { background: #dc2626; }
+    .btn-blue { background: #2563eb; }
+    .winner-overlay {
+      position: fixed; inset: 0;
+      background: rgba(15, 23, 42, 0.9);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      z-index: 10;
+    }
+    .winner-overlay.show { display: flex; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="badge-red">TIM MERAH (Komen "merah" / Rose)</span>
+    <span id="scoreText">0 : 0</span>
+    <span class="badge-blue">TIM BIRU (Komen "biru" / Lion)</span>
+  </div>
+
+  <div class="arena">
+    <div class="half-red"></div>
+    <div class="half-blue"></div>
+    <div class="center-line"></div>
+    <div class="rope" id="rope">
+      <div class="knot">⚡</div>
+    </div>
+  </div>
+
+  <div class="feed" id="feed">Ketik "merah" atau "biru" di live chat untuk menarik tali!</div>
+
+  <div class="controls">
+    <button class="btn-red" onclick="pull(-6, 'Tap Manual')">👈 Tarik Merah</button>
+    <button class="btn-blue" onclick="pull(6, 'Tap Manual')">Tarik Biru 👉</button>
+  </div>
+
+  <div class="winner-overlay" id="winnerOverlay">
+    <h2 id="winnerTitle">TIM MERAH MENANG!</h2>
+    <button style="background:#10b981; padding:10px 20px;" onclick="resetGame()">Main Lagi</button>
+  </div>
+
+  <script>
+    let position = 0; // -100 (Merah menang) s/d +100 (Biru menang)
+    let redWins = 0, blueWins = 0;
+    const rope = document.getElementById('rope');
+    const feed = document.getElementById('feed');
+    const overlay = document.getElementById('winnerOverlay');
+    const winnerTitle = document.getElementById('winnerTitle');
+    const scoreText = document.getElementById('scoreText');
+
+    function pull(delta, user, label = '') {
+      if (overlay.classList.contains('show')) return;
+      position = Math.max(-100, Math.min(100, position + delta));
+      rope.style.transform = `translateX(${position * 1.4}px)`;
+      const side = delta < 0 ? 'MERAH' : 'BIRU';
+      feed.textContent = `🔥 ${user} menarik ke ${side} ${label}`;
+
+      if (position <= -100) {
+        redWins++;
+        showWinner('🏆 TIM MERAH MENANG!');
+      } else if (position >= 100) {
+        blueWins++;
+        showWinner('🏆 TIM BIRU MENANG!');
+      }
+    }
+
+    function showWinner(text) {
+      scoreText.textContent = `${redWins} : ${blueWins}`;
+      winnerTitle.textContent = text;
+      overlay.classList.add('show');
+    }
+
+    function resetGame() {
+      position = 0;
+      rope.style.transform = 'translateX(0px)';
+      overlay.classList.remove('show');
+      feed.textContent = 'Ronde baru dimulai!';
+    }
+
+    window.addEventListener('message', (event) => {
+      const msg = event.data;
+      if (!msg) return;
+
+      if (msg.source === 'TIKTOK_ACTION') {
+        const user = msg.user || 'Penonton';
+        if (msg.action === 'PULL_LEFT') pull(-8, user);
+        if (msg.action === 'PULL_RIGHT') pull(8, user);
+        if (msg.action === 'BOOST_LEFT') pull(-25, user, '(GIFT BOOST!)');
+        if (msg.action === 'BOOST_RIGHT') pull(25, user, '(GIFT BOOST!)');
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') pull(-8, 'Keyboard');
+      if (e.key === 'ArrowRight') pull(8, 'Keyboard');
+      if (e.key === ' ') pull(position >= 0 ? -10 : 10, 'Like Boost');
+    });
+  </script>
+</body>
+</html>
