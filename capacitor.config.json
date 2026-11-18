@@ -1,0 +1,9 @@
+{
+  "appId": "com.livehub.interaktif",
+  "appName": "Live Game Hub",
+  "webDir": "www",
+  "server": {
+    "cleartext": true,
+    "androidScheme": "http"
+  }
+}
