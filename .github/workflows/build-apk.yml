@@ -22,7 +22,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
 
       - name: Install Capacitor & Generate Android Project
         run: |
@@ -36,7 +35,7 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon || ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon || (sleep 5 && ./gradlew assembleDebug --no-daemon)
 
       - name: Upload APK ke Artifacts
         uses: actions/upload-artifact@v4
