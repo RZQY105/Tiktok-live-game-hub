@@ -1,0 +1,10 @@
+{
+  "name": "tiktok-live-interactive-hub",
+  "version": "1.0.0",
+  "description": "Aplikasi TikTok Live Interaktif Multi-Game",
+  "dependencies": {
+    "@capacitor/android": "^6.1.0",
+    "@capacitor/cli": "^6.1.0",
+    "@capacitor/core": "^6.1.0"
+  }
+}
