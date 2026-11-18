@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Live Game Hub</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card: rgba(30, 41, 59, 0.72);
+      --border: rgba(255, 255, 255, 0.1);
+      --accent: #38bdf8;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+    }
+    .brand { font-weight: 800; font-size: 15px; letter-spacing: 0.5px; color: var(--accent); }
+    .status {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 99px;
+      background: #334155;
+      font-weight: 700;
+    }
+    .status.connected { background: #059669; color: #fff; }
+    .ws-bar {
+      display: flex;
+      gap: 6px;
+      padding: 8px 12px;
+      background: #0f172a;
+      border-bottom: 1px solid var(--border);
+    }
+    input, select {
+      background: #1e293b;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      width: 100%;
+    }
+    button {
+      background: var(--accent);
+      color: #090d16;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    button.secondary { background: #334155; color: var(--text); }
+    button.danger { background: #ef4444; color: #fff; }
+
+    .game-container {
+      position: relative;
+      width: 100%;
+      height: 270px;
+      background: #000;
+      border-bottom: 1px solid var(--border);
+    }
+    iframe { width: 100%; height: 100%; border: none; }
+
+    .game-toolbar {
+      display: flex;
+      gap: 6px;
+      padding: 8px 12px;
+      background: #0f172a;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--border);
+    }
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      background: #0f172a;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab-btn {
+      background: transparent;
+      color: var(--muted);
+      border-radius: 0;
+      padding: 10px;
+      border-bottom: 2px solid transparent;
+    }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .panel {
+      display: none;
+      padding: 12px;
+      flex: 1;
+      overflow-y: auto;
+    }
+    .panel.active { display: block; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+    .row { display: flex; gap: 6px; margin-bottom: 10px; }
+    .rule-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+    .log-box {
+      background: #020617;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    label.file-btn {
+      background: #334155;
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="brand">⚡ LIVE GAME HUB</span>
+    <span class="status" id="statusBadge">OFFLINE</span>
+  </div>
+
+  <div class="ws-bar">
+    <input type="text" id="wsInput" value="ws://localhost:8081" placeholder="ws://localhost:8081" />
+    <button id="connectBtn" onclick="toggleConnect()">Hubungkan</button>
+  </div>
+
+  <div class="game-container">
+    <iframe id="gameFrame" src="games/tug-of-war.html"></iframe>
+  </div>
+
+  <div class="game-toolbar">
+    <button class="secondary" onclick="bridge.loadBuiltInGame('games/tug-of-war.html')">🎮 Tarik Tambang</button>
+    <label class="file-btn">
+      📂 Impor HTML
+      <input type="file" accept=".html,.htm" style="display:none" onchange="handleFileImport(this)" />
+    </label>
+    <button class="secondary" onclick="promptUrlImport()">🌐 Impor URL</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('sim', this)">🎛️ Simulator</button>
+    <button class="tab-btn" onclick="switchTab('rules', this)">⚙️ Mapping</button>
+    <button class="tab-btn" onclick="switchTab('logs', this)">📜 Log Live</button>
+  </div>
+
+  <!-- PANEL 1: SIMULATOR MANUAL -->
+  <div class="panel active" id="panel-sim">
+    <p style="font-size:12px; color:var(--muted); margin-bottom:8px;">Tes interaksi gift, komen, & like secara manual tanpa harus live:</p>
+    <div class="grid-3">
+      <button onclick="simGift('Rose')">🌹 Gift Rose</button>
+      <button onclick="simGift('Lion')">🦁 Gift Lion</button>
+      <button onclick="simLike()">❤️ +10 Like</button>
+    </div>
+    <div class="grid-3">
+      <button class="secondary" onclick="simChat('merah')">💬 "merah"</button>
+      <button class="secondary" onclick="simChat('biru')">💬 "biru"</button>
+      <button class="secondary" onclick="simChat('lompat')">💬 "lompat"</button>
+    </div>
+    <div class="row">
+      <input type="text" id="customChatInput" placeholder="Ketik komentar simulasi bebas..." />
+      <button onclick="sendCustomChat()">Kirim</button>
+    </div>
+  </div>
+
+  <!-- PANEL 2: PENGATURAN MAPPING TRIGGER -->
+  <div class="panel" id="panel-rules">
+    <div class="row">
+      <select id="ruleTrigger">
+        <option value="chat">Komen</option>
+        <option value="gift">Gift</option>
+        <option value="like">Like</option>
+      </select>
+      <input type="text" id="ruleMatch" placeholder="Kata kunci / Nama Gift" />
+    </div>
+    <div class="row">
+      <select id="ruleActionType">
+        <option value="CUSTOM">Event Game (CUSTOM)</option>
+        <option value="KEY">Tombol Keyboard (KEY)</option>
+      </select>
+      <input type="text" id="ruleValue" placeholder="PULL_LEFT / Space / ArrowUp" />
+      <button onclick="addNewRule()">+ Tambah</button>
+    </div>
+    <div id="rulesList"></div>
+  </div>
+
+  <!-- PANEL 3: LOG REAL-TIME -->
+  <div class="panel" id="panel-logs">
+    <div class="log-box" id="logBox">Siap menerima event TikTok Live maupun simulator manual...<br></div>
+  </div>
+
+  <script src="js/bridge.js"></script>
+  <script>
+    const logBox = document.getElementById('logBox');
+    const statusBadge = document.getElementById('statusBadge');
+    const connectBtn = document.getElementById('connectBtn');
+    let isConnected = false;
+
+    const bridge = new TikTokGameBridge(
+      document.getElementById('gameFrame'),
+      (text) => {
+        const line = document.createElement('div');
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+        logBox.appendChild(line);
+        logBox.scrollTop = logBox.scrollHeight;
+      },
+      (status) => {
+        statusBadge.textContent = status;
+        isConnected = status === 'CONNECTED';
+        statusBadge.className = 'status' + (isConnected ? ' connected' : '');
+        connectBtn.textContent = isConnected ? 'Putuskan' : 'Hubungkan';
+      }
+    );
+
+    function toggleConnect() {
+      if (isConnected) {
+        bridge.disconnectLive();
+      } else {
+        bridge.connectLive(document.getElementById('wsInput').value.trim());
+      }
+    }
+
+    function simGift(giftName) {
+      bridge.processEvent({ type: 'gift', nickname: 'Sultan_Tester', giftName, repeatCount: 1 });
+    }
+
+    function simChat(comment) {
+      bridge.processEvent({ type: 'chat', nickname: 'Viewer_01', comment });
+    }
+
+    function simLike() {
+      bridge.processEvent({ type: 'like', nickname: 'TapTap_Fan', likeCount: 10 });
+    }
+
+    function sendCustomChat() {
+      const input = document.getElementById('customChatInput');
+      if (!input.value.trim()) return;
+      simChat(input.value.trim());
+      input.value = '';
+    }
+
+    function handleFileImport(input) {
+      if (input.files && input.files[0]) {
+        bridge.importLocalHtml(input.files[0]);
+      }
+    }
+
+    function promptUrlImport() {
+      const url = prompt('Masukkan URL game web (contoh: https://...):');
+      if (url) bridge.importExternalUrl(url.trim());
+    }
+
+    function switchTab(name, btn) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('panel-' + name).classList.add('active');
+      btn.classList.add('active');
+      if (name === 'rules') renderRules();
+    }
+
+    function renderRules() {
+      const list = document.getElementById('rulesList');
+      list.innerHTML = '';
+      bridge.rules.forEach(r => {
+        const div = document.createElement('div');
+        div.className = 'rule-item';
+        div.innerHTML = `
+          <span><b>${r.triggerType.toUpperCase()}</b> "${r.match}" ➔ <code>${r.actionType}:${r.value}</code></span>
+          <button class="danger" onclick="deleteRule(${r.id})">Hapus</button>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function addNewRule() {
+      const triggerType = document.getElementById('ruleTrigger').value;
+      const match = document.getElementById('ruleMatch').value.trim();
+      const actionType = document.getElementById('ruleActionType').value;
+      const value = document.getElementById('ruleValue').value.trim();
+      if (!value) return;
+      bridge.addRule({ triggerType, match, actionType, value });
+      document.getElementById('ruleMatch').value = '';
+      document.getElementById('ruleValue').value = '';
+      renderRules();
+    }
+
+    function deleteRule(id) {
+      bridge.removeRule(id);
+      renderRules();
+    }
+
+    renderRules();
+  </script>
+</body>
+</html>
